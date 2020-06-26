@@ -409,6 +409,8 @@ public class TOTPAuthenticatorTest {
         context.setProperty("username", username);
         context.setProperty("authenticatedUser", authenticatedUser);
         when(TOTPUtil.getUserRealm(anyString())).thenReturn(userRealm);
+        when(TOTPUtil.getTimeStepSize(context)).thenReturn((long) 30000);
+        when(TOTPUtil.getWindowSize(context)).thenReturn(3);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
         when(httpServletRequest.getParameter(TOTPAuthenticatorConstants.ENABLE_TOTP)).thenReturn(null);
         when(IdentityHelperUtil.checkSecondStepEnableByAdmin(context)).thenReturn(true);

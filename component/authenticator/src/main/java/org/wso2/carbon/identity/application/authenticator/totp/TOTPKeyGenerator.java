@@ -31,6 +31,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * TOTP key generator class.
@@ -61,6 +62,7 @@ public class TOTPKeyGenerator {
 			UserRealm userRealm = TOTPUtil.getUserRealm(username);
 			String tenantDomain = MultitenantUtils.getTenantDomain(username);
 			tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(username);
+			long timeStep = TOTPUtil.getTimeStepSize(context);
 			if (userRealm != null) {
 				Map<String, String> userClaimValues = userRealm.getUserStoreManager().
 						getUserClaimValues(tenantAwareUsername, new String[] {
@@ -89,8 +91,7 @@ public class TOTPKeyGenerator {
 				String issuer = TOTPUtil.getTOTPIssuerDisplayName(tenantDomain, context);
 				String qrCodeURL =
 						"otpauth://totp/" + issuer + ":" + tenantAwareUsername + "?secret=" +
-						secretKey +
-						"&issuer=" + issuer;
+						secretKey + "&issuer=" + issuer +"&period=" + timeStep;
 				encodedQRCodeURL = Base64.encodeBase64String(qrCodeURL.getBytes());
 				claims.put(TOTPAuthenticatorConstants.QR_CODE_CLAIM_URL, encodedQRCodeURL);
 			}
