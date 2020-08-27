@@ -52,8 +52,9 @@ public class TOTPKeyGenerator {
 	 * @return claims
 	 * @throws TOTPException when user realm is null or while decrypting the key
 	 */
-	public static Map<String, String> generateClaims(String username, boolean refresh,
-			AuthenticationContext context) throws TOTPException {
+	public static Map<String, String> generateClaims(String username, boolean refresh, AuthenticationContext context)
+			throws TOTPException {
+
 		String storedSecretKey, secretKey;
 		String decryptedSecretKey = null;
 		String generatedSecretKey = null;
@@ -72,15 +73,15 @@ public class TOTPKeyGenerator {
 			}
 			if (userRealm != null) {
 				Map<String, String> userClaimValues = userRealm.getUserStoreManager().
-						getUserClaimValues(tenantAwareUsername, new String[] {
-								TOTPAuthenticatorConstants.SECRET_KEY_CLAIM_URL }, null);
+						getUserClaimValues(tenantAwareUsername, new String[]{
+								TOTPAuthenticatorConstants.SECRET_KEY_CLAIM_URL}, null);
 				storedSecretKey =
 						userClaimValues.get(TOTPAuthenticatorConstants.SECRET_KEY_CLAIM_URL);
 				if (StringUtils.isEmpty(storedSecretKey) || refresh) {
 					TOTPAuthenticatorKey key = generateKey(tenantDomain, context);
 					generatedSecretKey = key.getKey();
 					claims.put(TOTPAuthenticatorConstants.SECRET_KEY_CLAIM_URL,
-					           TOTPUtil.encrypt(generatedSecretKey));
+							TOTPUtil.encrypt(generatedSecretKey));
 				} else {
 					decryptedSecretKey = TOTPUtil.decrypt(storedSecretKey);
 				}
@@ -91,18 +92,18 @@ public class TOTPKeyGenerator {
 				}
 
 				String issuer = TOTPUtil.getTOTPIssuerDisplayName(tenantDomain, context);
-				String qrCodeURL = "otpauth://totp/" + issuer + ":" + tenantAwareUsername + "?secret=" +
-						secretKey + "&issuer=" + issuer +"&period=" + timeStep;
+				String qrCodeURL =
+						"otpauth://totp/" + issuer + ":" + tenantAwareUsername + "?secret=" + secretKey + "&issuer=" +
+								issuer + "&period=" + timeStep;
 				encodedQRCodeURL = Base64.encodeBase64String(qrCodeURL.getBytes());
 				claims.put(TOTPAuthenticatorConstants.QR_CODE_CLAIM_URL, encodedQRCodeURL);
 			}
 		} catch (UserStoreException e) {
 			throw new TOTPException(
-					"TOTPKeyGenerator failed while trying to get the user store manager from user realm of the user : "
-							+ tenantAwareUsername, e);
+					"TOTPKeyGenerator failed while trying to get the user store manager from user realm of the user : " +
+							tenantAwareUsername, e);
 		} catch (CryptoException e) {
-			throw new TOTPException("TOTPKeyGenerator failed while decrypt the storedSecretKey ",
-			                        e);
+			throw new TOTPException("TOTPKeyGenerator failed while decrypt the storedSecretKey ", e);
 		} catch (AuthenticationFailedException e) {
 			throw new TOTPException(
 					"TOTPKeyGenerator cannot find the property value for encoding method", e);
@@ -126,14 +127,15 @@ public class TOTPKeyGenerator {
 	/**
 	 * Add TOTP secret key, encoding method and retrieve QR Code url for user.
 	 *
-	 * @param claims  Map with the TOTP claims
+	 * @param claims   Map with the TOTP claims
 	 * @param username Username of the user
 	 * @param context  Authentication context
 	 * @return QR code URL
 	 * @throws TOTPException when user realm is null or while decrypting the key
 	 */
 	public static String addTOTPClaimsAndRetrievingQRCodeURL(Map<String, String> claims, String username,
-			AuthenticationContext context) throws TOTPException {
+															 AuthenticationContext context) throws TOTPException {
+
 		String tenantAwareUsername = null;
 		String qrCodeURL = claims.get(TOTPAuthenticatorConstants.QR_CODE_CLAIM_URL);
 		try {
@@ -155,7 +157,7 @@ public class TOTPKeyGenerator {
 	/**
 	 * Add TOTP secret key, encoding method and retrieve QR Code url for user.
 	 *
-	 * @param claims  Map with the TOTP claims
+	 * @param claims   Map with the TOTP claims
 	 * @param username Username of the user
 	 * @return QR code URL
 	 * @throws TOTPException when user realm is null or while decrypting the key
@@ -174,8 +176,8 @@ public class TOTPKeyGenerator {
 	 * @throws TOTPException                 when user realm is null for given tenant domain
 	 * @throws AuthenticationFailedException when user realm is null for given user
 	 */
-	public static boolean resetLocal(String username)
-			throws TOTPException, AuthenticationFailedException {
+	public static boolean resetLocal(String username) throws TOTPException, AuthenticationFailedException {
+
 		try {
 			String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(username);
 			UserRealm userRealm = TOTPUtil.getUserRealm(username);
@@ -183,12 +185,12 @@ public class TOTPKeyGenerator {
 			if (userRealm != null) {
 				claims.put(TOTPAuthenticatorConstants.SECRET_KEY_CLAIM_URL, "");
 				userRealm.getUserStoreManager()
-				         .setUserClaimValues(tenantAwareUsername, claims, null);
+						.setUserClaimValues(tenantAwareUsername, claims, null);
 				return true;
 			} else {
 				throw new TOTPException(
 						"Can not find the user realm for the given tenant domain : " +
-						MultitenantUtils.getTenantDomain(username));
+								MultitenantUtils.getTenantDomain(username));
 			}
 		} catch (UserStoreException e) {
 			throw new TOTPException("Can not find the user realm for the user : " + username, e);
@@ -205,6 +207,7 @@ public class TOTPKeyGenerator {
 	 */
 	public static TOTPAuthenticatorKey generateKey(String tenantDomain, AuthenticationContext context)
 			throws AuthenticationFailedException {
+
 		TOTPKeyRepresentation encoding = TOTPKeyRepresentation.BASE32;
 		String encodingMethod;
 		if (context == null) {
@@ -230,8 +233,7 @@ public class TOTPKeyGenerator {
 	 * @return TOTPAuthenticatorKey when user realm is null or decrypt the secret key
 	 * @throws AuthenticationFailedException when tenantDomain is not specified
 	 */
-	public static TOTPAuthenticatorKey generateKey(String tenantDomain)
-			throws AuthenticationFailedException {
+	public static TOTPAuthenticatorKey generateKey(String tenantDomain) throws AuthenticationFailedException {
 
 		return generateKey(tenantDomain, null);
 	}

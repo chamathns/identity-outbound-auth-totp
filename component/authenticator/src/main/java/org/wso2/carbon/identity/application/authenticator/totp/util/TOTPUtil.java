@@ -108,7 +108,6 @@ public class TOTPUtil {
 		} else if (context.getProperty(TOTPAuthenticatorConstants.TOTP_ISSUER) != null) {
 			issuer = (String) context.getProperty(TOTPAuthenticatorConstants.TOTP_ISSUER);
 		}
-
 		if (StringUtils.isBlank(issuer)) {
 			issuer = tenantDomain;
 		}
@@ -122,13 +121,11 @@ public class TOTPUtil {
 	 * @return
 	 * @throws TOTPException On error during passing XML content or creating document builder.
 	 */
-	private static String getIssuerFromRegistry(String tenantDomain)
-			throws TOTPException {
+	private static String getIssuerFromRegistry(String tenantDomain) throws TOTPException {
 
 		String issuer = null;
 		int tenantID = IdentityTenantUtil.getTenantId(tenantDomain);
 		try {
-
 			NodeList authConfigList = getAuthenticationConfigNodeList(tenantDomain, tenantID);
 			for (int authConfigIndex = 0; authConfigIndex < authConfigList.getLength(); authConfigIndex++) {
 				Node authConfigNode = authConfigList.item(authConfigIndex);
@@ -326,9 +323,9 @@ public class TOTPUtil {
 	 * @return Time step size.
 	 * @throws AuthenticationFailedException On Error while getting value for time step size from registry.
 	 */
-	public static Long getTimeStepSize(String tenantDomain) throws AuthenticationFailedException {
+	public static long getTimeStepSize(String tenantDomain) throws AuthenticationFailedException {
 
-		Long timeStepSize;
+		long timeStepSize;
 		if (tenantDomain.equals(TOTPAuthenticatorConstants.SUPER_TENANT_DOMAIN)) {
 			timeStepSize = Long.parseLong(getTOTPParameters().get(TOTPAuthenticatorConstants.TIME_STEP_SIZE));
 		} else {
@@ -498,8 +495,8 @@ public class TOTPUtil {
 	 * @throws AuthenticationFailedException On error while getting value for enrolUserInAuthenticationFlow
 	 */
 	public static void redirectToEnableTOTPReqPage(HttpServletRequest request, HttpServletResponse response,
-												   AuthenticationContext context,
-												   String skey) throws AuthenticationFailedException {
+												   AuthenticationContext context, String skey)
+			throws AuthenticationFailedException {
 
 		if (isEnrolUserInAuthenticationFlowEnabled(context)) {
 			String multiOptionURI = "";
