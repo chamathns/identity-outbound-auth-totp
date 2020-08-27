@@ -55,19 +55,21 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import org.xml.sax.SAXException;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.util.Map;
 
 /**
  * TOTP Util class.
  */
 public class TOTPUtil {
+
 	private static final Log log = LogFactory.getLog(TOTPUtil.class);
 
 	/**
@@ -78,6 +80,7 @@ public class TOTPUtil {
 	 * @throws CryptoException On error during encryption
 	 */
 	public static String encrypt(String plainText) throws CryptoException {
+
 		return CryptoUtil.getDefaultCryptoUtil().encryptAndBase64Encode(plainText.getBytes(Charsets.UTF_8));
 	}
 
@@ -89,10 +92,12 @@ public class TOTPUtil {
 	 * @throws CryptoException On an error during decryption
 	 */
 	public static String decrypt(String cipherText) throws CryptoException {
+
 		return new String(CryptoUtil.getDefaultCryptoUtil().base64DecodeAndDecrypt(cipherText), Charsets.UTF_8);
 	}
 
-	public static String getTOTPIssuerDisplayName(String tenantDomain, AuthenticationContext context) throws TOTPException {
+	public static String getTOTPIssuerDisplayName(String tenantDomain, AuthenticationContext context)
+			throws TOTPException {
 
 		String issuer = null;
 		if (TOTPAuthenticatorConstants.SUPER_TENANT_DOMAIN.equals(tenantDomain) ||
@@ -112,6 +117,7 @@ public class TOTPUtil {
 
 	/**
 	 * Get xml file data from registry and get the value for Issuer.
+	 *
 	 * @param tenantDomain
 	 * @return
 	 * @throws TOTPException On error during passing XML content or creating document builder.
@@ -122,20 +128,8 @@ public class TOTPUtil {
 		String issuer = null;
 		int tenantID = IdentityTenantUtil.getTenantId(tenantDomain);
 		try {
-			PrivilegedCarbonContext.startTenantFlow();
-			PrivilegedCarbonContext privilegedCarbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
-			privilegedCarbonContext.setTenantId(tenantID);
-			privilegedCarbonContext.setTenantDomain(tenantDomain);
-			Registry registry = (Registry) privilegedCarbonContext.getRegistry(RegistryType.SYSTEM_GOVERNANCE);
-			Resource resource = registry.get(TOTPAuthenticatorConstants.AUTHENTICATOR_NAME + "/" +
-					TOTPAuthenticatorConstants.APPLICATION_AUTHENTICATION_XML);
-			Object content = resource.getContent();
-			String xml = new String((byte[]) content);
-			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-			factory.setNamespaceAware(true);
-			DocumentBuilder builder = factory.newDocumentBuilder();
-			Document doc = builder.parse(new ByteArrayInputStream(xml.getBytes()));
-			NodeList authConfigList = doc.getElementsByTagName("AuthenticatorConfig");
+
+			NodeList authConfigList = getAuthenticationConfigNodeList(tenantDomain, tenantID);
 			for (int authConfigIndex = 0; authConfigIndex < authConfigList.getLength(); authConfigIndex++) {
 				Node authConfigNode = authConfigList.item(authConfigIndex);
 				if (authConfigNode.getNodeType() == Node.ELEMENT_NODE) {
@@ -173,6 +167,31 @@ public class TOTPUtil {
 		return issuer;
 	}
 
+	private static NodeList getAuthenticationConfigNodeList(String tenantDomain, int tenantID)
+			throws RegistryException, ParserConfigurationException, SAXException, IOException {
+
+		String xml = getAuthenticationConfigFromRegistry(tenantDomain, tenantID);
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		factory.setNamespaceAware(true);
+		DocumentBuilder builder = factory.newDocumentBuilder();
+		Document doc = builder.parse(new ByteArrayInputStream(xml.getBytes()));
+		return doc.getElementsByTagName("AuthenticatorConfig");
+	}
+
+	private static String getAuthenticationConfigFromRegistry(String tenantDomain, int tenantID)
+			throws RegistryException {
+
+		PrivilegedCarbonContext.startTenantFlow();
+		PrivilegedCarbonContext privilegedCarbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
+		privilegedCarbonContext.setTenantId(tenantID);
+		privilegedCarbonContext.setTenantDomain(tenantDomain);
+		Registry registry = (Registry) privilegedCarbonContext.getRegistry(RegistryType.SYSTEM_GOVERNANCE);
+		Resource resource = registry.get(TOTPAuthenticatorConstants.AUTHENTICATOR_NAME + "/" +
+				TOTPAuthenticatorConstants.APPLICATION_AUTHENTICATION_XML);
+		Object content = resource.getContent();
+		return new String((byte[]) content);
+	}
+
 	/**
 	 * Get stored encoding method from AuthenticationContext.
 	 *
@@ -181,6 +200,7 @@ public class TOTPUtil {
 	 * @return encoding method
 	 */
 	public static String getEncodingMethod(String tenantDomain, AuthenticationContext context) {
+
 		String encodingMethod = null;
 		if (tenantDomain.equals(TOTPAuthenticatorConstants.SUPER_TENANT_DOMAIN)) {
 			encodingMethod = String.valueOf(getTOTPParameters().get(TOTPAuthenticatorConstants.ENCODING_METHOD));
@@ -214,6 +234,7 @@ public class TOTPUtil {
 	 * @throws AuthenticationFailedException On Error while getting value for encodingMethods from registry
 	 */
 	public static String getEncodingMethod(String tenantDomain) throws AuthenticationFailedException {
+
 		String encodingMethod;
 		if (tenantDomain.equals(TOTPAuthenticatorConstants.SUPER_TENANT_DOMAIN)) {
 			encodingMethod = String.valueOf(getTOTPParameters().get(TOTPAuthenticatorConstants.ENCODING_METHOD));
@@ -239,6 +260,7 @@ public class TOTPUtil {
 	 * Get parameter values from local file.
 	 */
 	private static Map<String, String> getTOTPParameters() {
+
 		AuthenticatorConfig authConfig = FileBasedConfigurationBuilder.getInstance()
 				.getAuthenticatorBean(TOTPAuthenticatorConstants.AUTHENTICATOR_NAME);
 		return authConfig.getParameterMap();
@@ -251,23 +273,11 @@ public class TOTPUtil {
 	 */
 	private static String getEncodingMethodFromRegistry(String tenantDomain, AuthenticationContext context)
 			throws TOTPException {
+
 		String encodingMethod = null;
 		int tenantID = IdentityTenantUtil.getTenantId(tenantDomain);
 		try {
-			PrivilegedCarbonContext.startTenantFlow();
-			PrivilegedCarbonContext privilegedCarbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
-			privilegedCarbonContext.setTenantId(tenantID);
-			privilegedCarbonContext.setTenantDomain(tenantDomain);
-			Registry registry = (Registry) privilegedCarbonContext.getRegistry(RegistryType.SYSTEM_GOVERNANCE);
-			Resource resource = registry.get(TOTPAuthenticatorConstants.AUTHENTICATOR_NAME + "/" +
-					TOTPAuthenticatorConstants.APPLICATION_AUTHENTICATION_XML);
-			Object content = resource.getContent();
-			String xml = new String((byte[]) content);
-			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-			factory.setNamespaceAware(true);
-			DocumentBuilder builder = factory.newDocumentBuilder();
-			Document doc = builder.parse(new ByteArrayInputStream(xml.getBytes()));
-			NodeList authConfigList = doc.getElementsByTagName("AuthenticatorConfig");
+			NodeList authConfigList = getAuthenticationConfigNodeList(tenantDomain, tenantID);
 			for (int authConfigIndex = 0; authConfigIndex < authConfigList.getLength(); authConfigIndex++) {
 				Node authConfigNode = authConfigList.item(authConfigIndex);
 				if (authConfigNode.getNodeType() == Node.ELEMENT_NODE) {
@@ -372,20 +382,7 @@ public class TOTPUtil {
 		Long timeStepSize = null;
 		int tenantID = IdentityTenantUtil.getTenantId(tenantDomain);
 		try {
-			PrivilegedCarbonContext.startTenantFlow();
-			PrivilegedCarbonContext privilegedCarbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
-			privilegedCarbonContext.setTenantId(tenantID);
-			privilegedCarbonContext.setTenantDomain(tenantDomain);
-			Registry registry = (Registry) privilegedCarbonContext.getRegistry(RegistryType.SYSTEM_GOVERNANCE);
-			Resource resource = registry.get(TOTPAuthenticatorConstants.AUTHENTICATOR_NAME + "/" +
-					TOTPAuthenticatorConstants.APPLICATION_AUTHENTICATION_XML);
-			Object content = resource.getContent();
-			String xml = new String((byte[]) content);
-			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-			factory.setNamespaceAware(true);
-			DocumentBuilder builder = factory.newDocumentBuilder();
-			Document doc = builder.parse(new ByteArrayInputStream(xml.getBytes()));
-			NodeList authConfigList = doc.getElementsByTagName("AuthenticatorConfig");
+			NodeList authConfigList = getAuthenticationConfigNodeList(tenantDomain, tenantID);
 			for (int authConfigIndex = 0; authConfigIndex < authConfigList.getLength(); authConfigIndex++) {
 				Node authConfigNode = authConfigList.item(authConfigIndex);
 				if (authConfigNode.getNodeType() == Node.ELEMENT_NODE) {
@@ -433,6 +430,7 @@ public class TOTPUtil {
 	 * @return windowSize
 	 */
 	public static int getWindowSize(AuthenticationContext context) {
+
 		if (log.isDebugEnabled()) {
 			log.debug("Read the user window size value from application authentication xml file");
 		}
@@ -456,6 +454,7 @@ public class TOTPUtil {
 	 * @return true, if EnrolUserInAuthenticationFlow is enabled
 	 */
 	public static boolean isEnrolUserInAuthenticationFlowEnabled(AuthenticationContext context) {
+
 		if (log.isDebugEnabled()) {
 			log.debug("Read the EnrolUserInAuthenticationFlow value from application authentication xml file");
 		}
@@ -465,7 +464,7 @@ public class TOTPUtil {
 		//If the config file is not in registry and the it is super tenant, getting the property from local.
 		// Else getting it from context.
 		if ((getPropertiesFromIdentityConfig != null ||
-		     tenantDomain.equals(TOTPAuthenticatorConstants.SUPER_TENANT_DOMAIN))) {
+				tenantDomain.equals(TOTPAuthenticatorConstants.SUPER_TENANT_DOMAIN))) {
 			return Boolean.parseBoolean(IdentityHelperUtil.getAuthenticatorParameters(
 					context.getProperty(TOTPAuthenticatorConstants.AUTHENTICATION).toString())
 					.get(TOTPAuthenticatorConstants.ENROL_USER_IN_AUTHENTICATIONFLOW));
@@ -475,38 +474,40 @@ public class TOTPUtil {
 		}
 	}
 
-    /**
-     * Redirect the enableTOTP request page.
-     *
-     * @param response The HttpServletResponse
-     * @param context  The AuthenticationContext
-     * @param skey  QR code claim
-     * @throws AuthenticationFailedException On error while getting value for enrolUserInAuthenticationFlow
-     */
-    public static void redirectToEnableTOTPReqPage(HttpServletResponse response, AuthenticationContext context,
-            String skey) throws AuthenticationFailedException {
-	    redirectToEnableTOTPReqPage(null, response, context, skey);
-    }
+	/**
+	 * Redirect the enableTOTP request page.
+	 *
+	 * @param response The HttpServletResponse
+	 * @param context  The AuthenticationContext
+	 * @param skey     QR code claim
+	 * @throws AuthenticationFailedException On error while getting value for enrolUserInAuthenticationFlow
+	 */
+	public static void redirectToEnableTOTPReqPage(HttpServletResponse response, AuthenticationContext context,
+												   String skey) throws AuthenticationFailedException {
 
-    /**
-     * Redirect the enableTOTP request page.
-     *
-     * @param request The HttpServletRequest
-     * @param response The HttpServletResponse
-     * @param context  The AuthenticationContext
-     * @param skey  QR code claim
-     * @throws AuthenticationFailedException On error while getting value for enrolUserInAuthenticationFlow
-     */
+		redirectToEnableTOTPReqPage(null, response, context, skey);
+	}
+
+	/**
+	 * Redirect the enableTOTP request page.
+	 *
+	 * @param request  The HttpServletRequest
+	 * @param response The HttpServletResponse
+	 * @param context  The AuthenticationContext
+	 * @param skey     QR code claim
+	 * @throws AuthenticationFailedException On error while getting value for enrolUserInAuthenticationFlow
+	 */
 	public static void redirectToEnableTOTPReqPage(HttpServletRequest request, HttpServletResponse response,
-			AuthenticationContext context,
-			String skey) throws AuthenticationFailedException {
+												   AuthenticationContext context,
+												   String skey) throws AuthenticationFailedException {
+
 		if (isEnrolUserInAuthenticationFlowEnabled(context)) {
 			String multiOptionURI = "";
 			if (request != null) {
-                multiOptionURI = request.getParameter("multiOptionURI");
-                multiOptionURI = multiOptionURI != null ? "&multiOptionURI=" + Encode.forUriComponent(multiOptionURI)
-                        : "";
-            }
+				multiOptionURI = request.getParameter("multiOptionURI");
+				multiOptionURI = multiOptionURI != null ? "&multiOptionURI=" + Encode.forUriComponent(multiOptionURI)
+						: "";
+			}
 			String enableTOTPReqPageUrl = getEnableTOTPPage(context) +
 					("?sessionDataKey=" + context.getContextIdentifier()) +
 					"&authenticators=" +
@@ -531,6 +532,7 @@ public class TOTPUtil {
 	 * @throws AuthenticationFailedException
 	 */
 	public static UserRealm getUserRealm(String username) throws AuthenticationFailedException {
+
 		UserRealm userRealm = null;
 		try {
 			if (username != null) {
@@ -555,6 +557,7 @@ public class TOTPUtil {
 	 */
 	public static String getLoginPageFromXMLFile(AuthenticationContext context, String authenticatorName)
 			throws AuthenticationFailedException {
+
 		Object propertiesFromLocal = null;
 		String loginPage = null;
 		String tenantDomain = context.getTenantDomain();
@@ -581,6 +584,7 @@ public class TOTPUtil {
 	 */
 	public static String getErrorPageFromXMLFile(AuthenticationContext context, String authenticatorName)
 			throws AuthenticationFailedException {
+
 		Object propertiesFromLocal = null;
 		String errorPage = null;
 		String tenantDomain = context.getTenantDomain();
@@ -605,6 +609,7 @@ public class TOTPUtil {
 	 * @throws AuthenticationFailedException
 	 */
 	private static String getEnableTOTPPage(AuthenticationContext context) throws AuthenticationFailedException {
+
 		String enableTOTPPage = TOTPUtil
 				.getEnableTOTPPageFromXMLFile(context, TOTPAuthenticatorConstants.AUTHENTICATOR_NAME);
 		if (StringUtils.isEmpty(enableTOTPPage)) {
@@ -628,6 +633,7 @@ public class TOTPUtil {
 	 */
 	public static String getEnableTOTPPageFromXMLFile(AuthenticationContext context, String authenticatorName)
 			throws AuthenticationFailedException {
+
 		Object propertiesFromLocal = null;
 		String enableTOTPPage = null;
 		String tenantDomain = context.getTenantDomain();
